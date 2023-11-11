@@ -1,10 +1,35 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.20)
+
+# find vcpkg for Windows
+if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    file(TO_CMAKE_PATH "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" VCPKG_CMAKE_TOOLCHAIN_FILE)
+    if (EXISTS ${VCPKG_CMAKE_TOOLCHAIN_FILE})
+        message(STATUS "Using vcpkg toolchain file: ${VCPKG_CMAKE_TOOLCHAIN_FILE}")
+        set(CMAKE_TOOLCHAIN_FILE ${VCPKG_CMAKE_TOOLCHAIN_FILE} CACHE FILEPATH "" FORCE)
+    endif()
+endif()
+
 project(binapi)
 
+option(BUILD_EXAMPLES "Build examples" OFF)
+
+# set compile options
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -fsanitize=address")
+if(UNIX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+endif()
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  /W4 /bigobj")
+endif()
 
+# find packages
+find_package(Boost REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(OpenSSL REQUIRED)
+
+# defines
 add_definitions(
     -UNDEBUG
     -DDTF_HEADER_ONLY
@@ -13,12 +38,6 @@ add_definitions(
 include_directories(
     ./include
 )
-
-if (DEFINED ${BOOST_INCLUDE_DIR})
-    include_directories(
-        ${BOOST_INCLUDE_DIR}
-    )
-endif()
 
 set(BINAPI_HEADERS
     binapi/api.hpp
@@ -47,25 +66,38 @@ set(BINAPI_SOURCES
     src/websocket.cpp
 )
 
-add_executable(
-    ${PROJECT_NAME}
-    #
-    main.cpp
-    #
-    ${BINAPI_SOURCES}
+# create library, to use externaly link BinAPI::binapilib
+add_library(binapilib STATIC ${BINAPI_SOURCES})
+add_library(BinAPI::binapilib ALIAS binapilib)
+
+# bind include files to target
+target_include_directories(binapilib PUBLIC ${BINAPI_HEADERS})
+
+# link libraries to target
+target_link_libraries(
+    binapilib
+    ZLIB::ZLIB
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    Boost::boost
 )
 
 if (DEFINED ${BOOST_LIB_DIR})
     target_link_libraries(
-        ${PROJECT_NAME}
+        binapilib
         -L${BOOST_LIB_DIR}
     )
 endif()
 
-target_link_libraries(
+# build executable
+add_executable(
     ${PROJECT_NAME}
-    z
-    crypto
-    ssl
-    pthread
+    #
+    main.cpp
 )
+target_link_libraries(${PROJECT_NAME} BinAPI::binapilib)
+
+# Check if the BUILD_EXAMPLES option is set
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()

@@ -15,6 +15,7 @@
 #include "enums.hpp"
 
 #include <memory>
+#include <string>
 #include <functional>
 
 namespace boost {

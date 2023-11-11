@@ -26,13 +26,13 @@ int main() {
         ,10000 // recvWindow
     };
 
-    auto res0 = api.exchange_info("BTCUSDT");
+    auto res0 = api.depths("BTCUSDT", 100);
     if ( !res0 ) {
         std::cerr << "exchange_info error: " << res0.errmsg << std::endl;
 
         return EXIT_FAILURE;
     }
-    std::cout << "exchange info: " << res0.v << std::endl << std::endl;
+    std::cout << "depths info: " << res0.v << std::endl << std::endl;
 
     auto res1 = api.price("BTCUSDT");
     if ( !res1 ) {
