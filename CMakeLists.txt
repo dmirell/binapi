@@ -12,10 +12,10 @@ endif()
 project(binapi)
 
 option(BUILD_EXAMPLES "Build examples" OFF)
+option(BUILD_EXECUTEABLE "Build executable" OFF)
 
 # set compile options
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+set(CMAKE_CXX_STANDARD 17)
 
 if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
@@ -70,32 +70,31 @@ set(BINAPI_SOURCES
 add_library(binapilib STATIC ${BINAPI_SOURCES})
 add_library(BinAPI::binapilib ALIAS binapilib)
 
-# bind include files to target
-target_include_directories(binapilib PUBLIC ${BINAPI_HEADERS})
+# Export include directories to be used by external projects
+target_include_directories(
+    binapilib
+    INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+    $<INSTALL_INTERFACE:include>
+)
 
 # link libraries to target
 target_link_libraries(
-    binapilib
-    ZLIB::ZLIB
+    binapilib PRIVATE
     OpenSSL::SSL
     OpenSSL::Crypto
     Boost::boost
 )
 
-if (DEFINED ${BOOST_LIB_DIR})
-    target_link_libraries(
-        binapilib
-        -L${BOOST_LIB_DIR}
+if (BUILD_EXECUTEABLE)
+    # build executable
+    add_executable(
+        ${PROJECT_NAME}
+        #
+        main.cpp
     )
+    target_link_libraries(${PROJECT_NAME} BinAPI::binapilib)
 endif()
-
-# build executable
-add_executable(
-    ${PROJECT_NAME}
-    #
-    main.cpp
-)
-target_link_libraries(${PROJECT_NAME} BinAPI::binapilib)
 
 # Check if the BUILD_EXAMPLES option is set
 if(BUILD_EXAMPLES)
