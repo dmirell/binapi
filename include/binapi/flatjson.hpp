@@ -1316,6 +1316,7 @@ public:
     const_iterator cbegin() const { return const_iterator{m_beg}; }
     const_iterator cend()   const { return const_iterator{m_end}; }
 
+    fjson() = default;
     fjson(const fjson &) = default;
     fjson(fjson &&) = default;
 

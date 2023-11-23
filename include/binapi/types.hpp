@@ -14,6 +14,7 @@
 
 #include "double_type.hpp"
 #include "enums.hpp"
+#include "flatjson.hpp"
 
 #include <boost/variant.hpp>
 
@@ -858,7 +859,7 @@ struct book_ticker_t {
 
 struct combined_stream_t {
     std::string stream;
-    std::string data;
+    flatjson::fjson data;
 
     static combined_stream_t construct(const flatjson::fjson &json);
     friend std::ostream& operator<<(std::ostream &os, const combined_stream_t &o);

@@ -34,7 +34,7 @@
 #include <set>
 #include <cstring>
 
-#include <iostream> // TODO: comment out
+// #include <iostream> // TODO: comment out
 
 #define __BINAPI_CB_ON_ERROR(cb, ec) \
     cb(__FILE__ "(" BOOST_PP_STRINGIZE(__LINE__) ")", ec.value(), ec.message(), nullptr, 0);
@@ -286,7 +286,6 @@ struct websockets::impl {
         };
         std::shared_ptr<websocket> ws{new websocket(m_ioctx), deleter};
         std::string schannel = make_channel_name(pair, channel, combined_stream);
-        std::cout << schannel << '\n';
 
         auto wscb = [this, schannel, cb=std::move(cb)]
             (const char *fl, int ec, std::string errmsg, const char *ptr, std::size_t size) -> bool
@@ -596,16 +595,14 @@ bool websockets::on_combined_stream_message_recieved(
         return false;
     }
 
-    std::cout << "msg: " << msg << std::endl;
+    // std::cout << "msg: " << msg << std::endl;
 
     if (msg.stream.find("depth") != msg.stream.npos) {
-        const flatjson::fjson json(msg.data.c_str(), msg.data.length());
-        diff_depths_t diff_depth_msg = diff_depths_t::construct(json);
-       return  _combined_stream.diff_depth_cb(std::move(diff_depth_msg));
+        diff_depths_t diff_depth_msg = diff_depths_t::construct(msg.data);
+        return _combined_stream.diff_depth_cb(std::move(diff_depth_msg));
     } else {
-        const flatjson::fjson json(msg.data.c_str(), msg.data.length());
-        trade_t trade_msg = trade_t::construct(json);
-        _combined_stream.trade_cb(std::move(trade_msg));
+        trade_t trade_msg = trade_t::construct(msg.data);
+        return _combined_stream.trade_cb(std::move(trade_msg));
     }
     return true;
 }

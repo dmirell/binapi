@@ -2016,11 +2016,7 @@ std::ostream& operator<<(std::ostream &os, const book_ticker_t &o) {
 combined_stream_t combined_stream_t::construct(const flatjson::fjson &json) {
     assert(json.is_valid());
 
-    combined_stream_t res{};
-    __BINAPI_GET(stream);
-    res.data = json["data"].dump();
-    // Remove the field name from the string
-    res.data.erase(0, res.data.find(':') + 1);
+    combined_stream_t res{json["stream"].to_string(), json["data"]};
 
     return res;
 }
