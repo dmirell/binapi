@@ -34,7 +34,7 @@
 #include <set>
 #include <cstring>
 
-//#include <iostream> // TODO: comment out
+#include <iostream> // TODO: comment out
 
 #define __BINAPI_CB_ON_ERROR(cb, ec) \
     cb(__FILE__ "(" BOOST_PP_STRINGIZE(__LINE__) ")", ec.value(), ec.message(), nullptr, 0);
@@ -251,9 +251,9 @@ struct websockets::impl {
         unsubscribe_all();
     }
 
-    static std::string make_channel_name(const char *pair, const char *channel) {
-        std::string res{"/ws/"};
-        if ( pair ) {
+    static std::string make_channel_name(const char *pair, const char *channel, bool combined_stream) {
+        std::string res{combined_stream? "/stream?streams=" : "/ws/"};
+        if ( pair && !combined_stream ) {
             res += pair;
             if ( *pair != '!' ) {
                 boost::algorithm::to_lower(res);
@@ -264,11 +264,15 @@ struct websockets::impl {
 
         res += channel;
 
+        if (combined_stream) {
+            boost::algorithm::to_lower(res);
+        }
+
         return res;
     }
 
     template<typename F>
-    websockets::handle start_channel(const char *pair, const char *channel, F cb) {
+    websockets::handle start_channel(const char *pair, const char *channel, F cb, bool combined_stream = false) {
         using args_tuple = typename boost::callable_traits::args<F>::type;
         using message_type = typename std::tuple_element<3, args_tuple>::type;
 
@@ -281,7 +285,8 @@ struct websockets::impl {
             delete ws;
         };
         std::shared_ptr<websocket> ws{new websocket(m_ioctx), deleter};
-        std::string schannel = make_channel_name(pair, channel);
+        std::string schannel = make_channel_name(pair, channel, combined_stream);
+        std::cout << schannel << '\n';
 
         auto wscb = [this, schannel, cb=std::move(cb)]
             (const char *fl, int ec, std::string errmsg, const char *ptr, std::size_t size) -> bool
@@ -393,6 +398,11 @@ struct websockets::impl {
     > m_set;
 };
 
+std::string make_diff_depth_channel_name(e_freq freq) {
+    std::string ch = "depth@" + std::to_string(static_cast<std::size_t>(freq)) + "ms";
+    return ch;
+}
+
 /*************************************************************************************************/
 
 websockets::websockets(
@@ -420,8 +430,14 @@ websockets::handle websockets::part_depth(const char *pair, e_levels level, e_fr
 /*************************************************************************************************/
 
 websockets::handle websockets::diff_depth(const char *pair, e_freq freq, on_diff_depths_received_cb cb) {
-    std::string ch = "depth@" + std::to_string(static_cast<std::size_t>(freq)) + "ms";
-    return pimpl->start_channel(pair, ch.c_str(), std::move(cb));
+    return pimpl->start_channel(pair, make_diff_depth_channel_name(freq).c_str(), std::move(cb));
+}
+
+/*************************************************************************************************/
+
+void websockets::add_diff_depth_to_combined_stream(e_freq freq, on_diff_depths_combined_cb cb) {
+    _combined_stream.diff_depth_freq = freq;
+    _combined_stream.diff_depth_cb = cb;
 }
 
 /*************************************************************************************************/
@@ -464,6 +480,12 @@ websockets::handle websockets::klines(const char *pair, const char *period, on_k
 
 websockets::handle websockets::trade(const char *pair, on_trade_received_cb cb)
 { return pimpl->start_channel(pair, "trade", std::move(cb)); }
+
+/*************************************************************************************************/
+
+void websockets::add_trade_to_combined_stream(on_trade_combined_cb cb) {
+    _combined_stream.trade_cb = cb;
+}
 
 /*************************************************************************************************/
 
@@ -545,6 +567,47 @@ websockets::handle websockets::userdata(
     };
 
     return pimpl->start_channel(nullptr, lkey, std::move(cb));
+}
+
+/*************************************************************************************************/
+
+websockets::handle websockets::combined_stream_run(const char *pair, const on_combined_stream_error_cb& error_cb) {
+    assert(pair != nullptr);
+    _combined_stream.error_cb = error_cb;
+    std::string ch;
+    if (_combined_stream.diff_depth_cb) {
+        ch = ch + pair + "@" + make_diff_depth_channel_name(_combined_stream.diff_depth_freq) + '/';
+    }
+    if (_combined_stream.trade_cb) {
+        ch = ch + pair + "@" + "trade/";
+    }
+    assert(ch.length() > 0);
+    ch.pop_back(); // remove last '/'
+    on_combined_stream_message_recieved_cb cb
+        = std::bind(&websockets::on_combined_stream_message_recieved, this,
+                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
+    return pimpl->start_channel(pair, ch.c_str(), std::move(cb), true);
+}
+
+bool websockets::on_combined_stream_message_recieved(
+    const char *fl, int ec, std::string errmsg, combined_stream_t msg) {
+    if ( ec ) {
+        _combined_stream.error_cb(fl, ec, std::move(errmsg), std::move(msg));
+        return false;
+    }
+
+    std::cout << "msg: " << msg << std::endl;
+
+    if (msg.stream.find("depth") != msg.stream.npos) {
+        const flatjson::fjson json(msg.data.c_str(), msg.data.length());
+        diff_depths_t diff_depth_msg = diff_depths_t::construct(json);
+       return  _combined_stream.diff_depth_cb(std::move(diff_depth_msg));
+    } else {
+        const flatjson::fjson json(msg.data.c_str(), msg.data.length());
+        trade_t trade_msg = trade_t::construct(json);
+        _combined_stream.trade_cb(std::move(trade_msg));
+    }
+    return true;
 }
 
 /*************************************************************************************************/

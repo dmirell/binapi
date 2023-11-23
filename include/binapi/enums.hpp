@@ -89,6 +89,17 @@ const char* e_trade_resp_type_to_string(e_trade_resp_type resp);
 
 /*************************************************************************************************/
 
+enum class e_datastream: std::size_t {
+     DIFFDEPTH
+    ,TRADE
+    ,UNKNOWN
+};
+
+e_datastream e_datastream_from_string(const char *str);
+const char* e_datastream_to_string(e_datastream resp);
+
+/*************************************************************************************************/
+
 } // ns binapi
 
 #endif // __binapi__enums_hpp

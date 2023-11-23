@@ -45,6 +45,7 @@ struct mini_tickers_t;
 struct market_ticker_t;
 struct markets_tickers_t;
 struct book_ticker_t;
+struct combined_stream_t;
 
 /*************************************************************************************************/
 
@@ -72,7 +73,9 @@ struct websockets {
 
     // https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md#diff-depth-stream
     using on_diff_depths_received_cb = std::function<bool(const char *fl, int ec, std::string errmsg, diff_depths_t msg)>;
+    using on_diff_depths_combined_cb = std::function<bool(diff_depths_t msg)>;
     handle diff_depth(const char *pair, e_freq freq, on_diff_depths_received_cb cb);
+    void add_diff_depth_to_combined_stream(e_freq freq, on_diff_depths_combined_cb cb);
 
     // https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md#klinecandlestick-streams
     using on_kline_received_cb = std::function<bool(const char *fl, int ec, std::string errmsg, kline_t msg)>;
@@ -81,7 +84,9 @@ struct websockets {
 
     // https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md#trade-streams
     using on_trade_received_cb = std::function<bool(const char *fl, int ec, std::string errmsg, trade_t msg)>;
+    using on_trade_combined_cb = std::function<bool(trade_t msg)>;
     handle trade(const char *pair, on_trade_received_cb cb);
+    void add_trade_to_combined_stream(on_trade_combined_cb cb);
 
     // https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md#aggregate-trade-streams
     using on_agg_trade_received_cb = std::function<bool(const char *fl, int ec, std::string errmsg, agg_trade_t msg)>;
@@ -120,6 +125,10 @@ struct websockets {
         ,on_balance_update_cb balance_update
         ,on_order_update_cb order_update
     );
+    
+    using on_combined_stream_message_recieved_cb = std::function<bool(const char *fl, int ec, std::string errmsg, combined_stream_t msg)>;
+    using on_combined_stream_error_cb = std::function<void(const char *fl, int ec, std::string errmsg, combined_stream_t msg)>;
+    handle combined_stream_run(const char *pair, const on_combined_stream_error_cb& error_cb);
 
     void unsubscribe(const handle &h);
     void async_unsubscribe(const handle &h);
@@ -127,7 +136,15 @@ struct websockets {
     void async_unsubscribe_all();
 
 private:
+    bool on_combined_stream_message_recieved(const char *fl, int ec, std::string errmsg, combined_stream_t msg);
+    struct combined_stream {
+        e_freq diff_depth_freq;
+        on_diff_depths_combined_cb diff_depth_cb{nullptr};
+        on_trade_combined_cb trade_cb{nullptr};
+        on_combined_stream_error_cb error_cb{nullptr};
+    };
     struct impl;
+    combined_stream _combined_stream;
     std::unique_ptr<impl> pimpl;
 };
 

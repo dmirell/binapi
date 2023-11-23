@@ -128,4 +128,29 @@ const char* e_trade_resp_type_to_string(e_trade_resp_type resp) {
 
 /*************************************************************************************************/
 
+e_datastream e_datastream_from_string(const char *str) {
+    const auto hash = fnv1a(str);
+    switch ( hash ) {
+        case fnv1a("DIFFDEPTH"): return e_datastream::DIFFDEPTH;
+        case fnv1a("TRADE"): return e_datastream::TRADE;
+        case fnv1a("UNKNOWN"): return e_datastream::UNKNOWN;
+    }
+
+    assert(!"unreachable");
+}
+
+const char* e_datastream_to_string(e_datastream resp) {
+    switch ( resp ) {
+        case e_datastream::DIFFDEPTH: return "DIFFDEPTH";
+        case e_datastream::TRADE: return "TRADE";
+        case e_datastream::UNKNOWN: return "UNKNOWN";
+    }
+
+    assert(!"unreachable");
+
+    return nullptr;
+}
+
+/*************************************************************************************************/
+
 } // ns binapi

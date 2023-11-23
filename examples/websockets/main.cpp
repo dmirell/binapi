@@ -25,8 +25,37 @@ int main() {
         ,"stream.binance.com"
         ,"9443"
     };
+    /*
+ ws.diff_depth("BTCUSDT", binapi::e_freq::_100ms,
+        [](const char *fl, int ec, std::string emsg, auto depths) {
+            if ( ec ) {
+                std::cerr << "subscribe diff_depth error: fl=" << fl << ", ec=" << ec << ", emsg=" << emsg << std::endl;
 
-    ws.part_depth("BTCUSDT", binapi::e_levels::_5, binapi::e_freq::_100ms,
+                return false;
+            }
+
+            std::cout << "diff_depths: " << depths << std::endl;
+
+            return true;
+        }
+    );*/
+    ws.add_diff_depth_to_combined_stream(binapi::e_freq::_100ms,
+        [](auto depths) {
+            std::cout << "diff_depths: " << depths << std::endl;
+
+            return true;
+        }
+    );
+    ws.combined_stream_run("BTCUSDT", [](const char *fl, int ec, std::string emsg, auto depths) {
+            if ( ec ) {
+                std::cerr << "subscribe part_depth error: fl=" << fl << ", ec=" << ec << ", emsg=" << emsg << std::endl;
+
+                return false;
+            }
+
+            return false;
+          });
+    /*ws.part_depth("BTCUSDT", binapi::e_levels::_5, binapi::e_freq::_100ms,
         [](const char *fl, int ec, std::string emsg, auto depths) {
             if ( ec ) {
                 std::cerr << "subscribe part_depth error: fl=" << fl << ", ec=" << ec << ", emsg=" << emsg << std::endl;
@@ -111,16 +140,16 @@ int main() {
     );
 
     boost::asio::steady_timer timer0{ioctx, std::chrono::steady_clock::now() + std::chrono::seconds(5)};
-    timer0.async_wait([&ws, book_handler](const auto &/*ec*/){
+    timer0.async_wait([&ws, book_handler](const auto &){
         std::cout << "unsubscribing book_handler: " << book_handler << std::endl;
         ws.unsubscribe(book_handler);
     });
 
     boost::asio::steady_timer timer1{ioctx, std::chrono::steady_clock::now() + std::chrono::seconds(10)};
-    timer1.async_wait([&ws, books_handler](const auto &/*ec*/){
+    timer1.async_wait([&ws, books_handler](const auto &){
         std::cout << "async unsubscribing books_handler: " << books_handler << std::endl;
         ws.async_unsubscribe(books_handler);
-    });
+    });*/
 
     boost::asio::steady_timer timer2{ioctx, std::chrono::steady_clock::now() + std::chrono::seconds(15)};
     timer2.async_wait([&ws](const auto &/*ec*/){
