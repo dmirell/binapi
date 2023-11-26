@@ -1,14 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
 
-# find vcpkg for Windows
-if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    file(TO_CMAKE_PATH "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" VCPKG_CMAKE_TOOLCHAIN_FILE)
-    if (EXISTS ${VCPKG_CMAKE_TOOLCHAIN_FILE})
-        message(STATUS "Using vcpkg toolchain file: ${VCPKG_CMAKE_TOOLCHAIN_FILE}")
-        set(CMAKE_TOOLCHAIN_FILE ${VCPKG_CMAKE_TOOLCHAIN_FILE} CACHE FILEPATH "" FORCE)
-    endif()
-endif()
-
 project(binapi)
 
 option(BUILD_EXAMPLES "Build examples" OFF)
