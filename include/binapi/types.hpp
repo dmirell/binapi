@@ -697,8 +697,6 @@ struct trade_t {
     std::size_t t; // Trade ID
     double_type p; // Price
     double_type q; // Quantity
-    std::size_t b; // Buyer order ID
-    std::size_t a; // Seller order ID
     std::size_t T; // Trade time
     bool m; // Is the buyer the market maker?
     bool M; // Ignore
@@ -860,7 +858,7 @@ struct book_ticker_t {
 struct combined_stream_t {
     std::string stream;
     flatjson::fjson data;
-
+    
     static combined_stream_t construct(const flatjson::fjson &json);
     friend std::ostream& operator<<(std::ostream &os, const combined_stream_t &o);
 };

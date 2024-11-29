@@ -42,7 +42,7 @@
 #define __FLATJSON__STRINGIZE(x) __FLATJSON__STRINGIZE_I(x)
 
 #define __FLATJSON__MAKE_ERROR_MESSAGE(msg) \
-    __FILE__ "(" __FLATJSON__STRINGIZE(__LINE__) "): " msg
+    std::string(__FILE__) + "(" + __FLATJSON__STRINGIZE(__LINE__) + "): " + msg
 
 #ifdef __FLATJSON__DONT_CHECK_OVERFLOW
 #   define __FLATJSON__CHECK_OVERFLOW(expr, type, err)
@@ -1316,7 +1316,7 @@ public:
     const_iterator cbegin() const { return const_iterator{m_beg}; }
     const_iterator cend()   const { return const_iterator{m_end}; }
 
-    fjson() = default;
+    // fjson() = default;
     fjson(const fjson &) = default;
     fjson(fjson &&) = default;
 
@@ -1454,7 +1454,7 @@ public:
             return {m_storage, res.first, res.second};
         }
 
-        throw std::runtime_error(__FLATJSON__MAKE_ERROR_MESSAGE("key not found"));
+        throw std::runtime_error(__FLATJSON__MAKE_ERROR_MESSAGE("key \"" + key + "\" not found"));
     }
     // for arrays
     fjson at(std::size_t idx) const {
