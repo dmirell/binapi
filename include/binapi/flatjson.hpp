@@ -1323,7 +1323,7 @@ public:
     fjson& operator= (const fjson &) = default;
     fjson& operator= (fjson &&) = default;
 
-    explicit fjson(std::size_t reserved = 0)
+    fjson(std::size_t reserved = 0)
         :m_storage{std::make_shared<storage_type>(reserved)}
         ,m_src_beg{nullptr}
         ,m_src_end{nullptr}
@@ -1335,7 +1335,7 @@ public:
          std::size_t L
         ,typename CharT = typename std::iterator_traits<InputIterator>::value_type
     >
-    explicit fjson(const CharT (&str)[L], std::size_t reserved = 0)
+    fjson(const CharT (&str)[L], std::size_t reserved = 0)
         :m_storage{L-1 ? std::make_shared<storage_type>(reserved) : storage_ptr{}}
         ,m_src_beg{str}
         ,m_src_end{str+L-1}
